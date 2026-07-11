@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MWA - ระบบสร้างและตกแต่ง QR Code พร้อมกรอบ</title>
+    
+    <!-- ดึงฟอนต์ Prompt และคลังรหัส QR Code -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Prompt', sans-serif;
+            background-color: #f4f7fa; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .card {
+            background: #ffffff;
+            padding: 35px 25px;
+            border-radius: 16px; 
+            box-shadow: 0 10px 25px rgba(164, 183, 209, 0.2); 
+            text-align: center;
+            max-width: 480px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .agency-badge {
+            display: inline-block;
+            background-color: #eff6ff;
+            color: #1d4ed8;
+            padding: 6px 18px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            margin-bottom: 14px;
+        }
+        
+        h2 { color: #1e3a8a; margin: 0 0 8px 0; font-weight: 600; font-size: 24px; }
+        p { color: #64748b; font-size: 14px; margin: 0 0 24px 0; font-weight: 300; }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 16px;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 10px;
+            box-sizing: border-box;
+            font-size: 16px;
+            font-family: 'Prompt', sans-serif;
+            outline: none;
+            transition: all 0.2s ease;
+            background-color: #f8fafc;
+            margin-bottom: 20px;
+        }
+        input[type="text"]:focus { 
+            border-color: #3b82f6; 
+            background-color: #fff;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+        }
+
+        /* ส่วนตกแต่ง QR Code */
+        .customize-section {
+            text-align: left;
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #e2e8f0;
+        }
+        .customize-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 15px;
+        }
+        .custom-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+            gap: 15px;
+        }
+        .opt-label {
+            font-size: 13px;
+            color: #64748b;
+            margin-bottom: 8px;
+            display: block;
+        }
+        .color-presets {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .color-dot {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: transform 0.1s;
+        }
+        .color-dot:hover { transform: scale(1.1); }
+        .color-dot.active { border-color: #2563eb; transform: scale(1.1); }
+        
+        .color-picker-wrapper {
+            position: relative;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: 2px dashed #94a3b8;
+            cursor: pointer;
+            overflow: hidden;
+        }
+        .color-picker-wrapper input[type="color"] {
+            position: absolute;
+            top: -5px; left: -5px; width: 32px; height: 32px;
+            cursor: pointer;
+            opacity: 0;
+        }
+
+        /* ส่วนอัปโหลดโลโก้ */
+        .upload-btn-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+        .btn-upload-custom {
+            border: 1px solid #cbd5e1;
+            color: #475569;
+            background-color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-family: 'Prompt', sans-serif;
+            cursor: pointer;
+            display: inline-block;
+        }
+        .upload-btn-wrapper input[type="file"] {
+            position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+        }
+        .logo-preview-container {
+            margin-top: 10px;
+            position: relative;
+            display: none;
+            width: 60px;
+            height: 60px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 4px;
+            background: white;
+        }
+        .logo-preview-container img {
+            width: 100%; height: 100%; object-fit: contain;
+        }
+        .btn-delete-logo {
+            position: absolute;
+            top: -6px; right: -6px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 18px; height: 18px;
+            font-size: 11px;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold;
+        }
+        
+        .btn-generate { 
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 500;
+            font-family: 'Prompt', sans-serif;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background-color: #2563eb; 
+            color: white; 
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+        }
+        .btn-generate:hover { background-color: #1d4ed8; }
+        
+        #qrcode-output { display: flex; justify-content: center; margin-top: 24px; }
+        #qrcode-output img {
+            padding: 14px; 
+            background: white; 
+            border: 1px solid #e2e8f0; 
+            border-radius: 12px; 
+            max-width: 100%; 
+            height: auto;
+        }
+
+        .save-instruction {
+            display: none;
+            background-color: #f0f9ff;
+            border: 1px dashed #bae6fd;
+            padding: 14px;
+            border-radius: 10px;
+            font-size: 13.5px;
+            color: #0369a1;
+            margin-top: 24px;
+            line-height: 1.6;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <div class="agency-badge">MWA</div>
+    
+    <h2>ระบบสร้าง QR Code</h2>
+    <p>สำหรับใช้งานภายในหน่วยงาน (ไม่มีโฆษณา)</p>
+    
+    <input type="text" id="url-input" placeholder="วางลิงก์ URL หรือข้อความที่นี่...">
+    
+    <!-- ส่วนแผงควบคุมการตกแต่ง -->
+    <div class="customize-section">
+        <div class="customize-title">ตกแต่ง QR CODE</div>
+        <div class="custom-grid">
+            <!-- เลือกสีตัว QR -->
+            <div>
+                <label class="opt-label">สี QR Code</label>
+                <div class="color-presets" id="qr-presets">
+                    <div class="color-dot active" style="background-color: #000000;" data-color="#000000"></div>
+                    <div class="color-dot" style="background-color: #1d4ed8;" data-color="#1d4ed8"></div>
+                    <div class="color-dot" style="background-color: #047857;" data-color="#047857"></div>
+                    <div class="color-dot" style="background-color: #b91c1c;" data-color="#b91c1c"></div>
+                    <div class="color-picker-wrapper">
+                        <input type="color" id="qr-color-picker" value="#000000">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- เลือกสีพื้นหลัง -->
+            <div>
+                <label class="opt-label">สีพื้นหลัง</label>
+                <div class="color-presets" id="bg-presets">
+                    <div class="color-dot active" style="background-color: #ffffff; border: 1px solid #cbd5e1;" data-color="#ffffff"></div>
+                    <div class="color-dot" style="background-color: #fef08a;" data-color="#fef08a"></div>
+                    <div class="color-dot" style="background-color: #e2e8f0;" data-color="#e2e8f0"></div>
+                    <div class="color-dot" style="background-color: #e0f2fe;" data-color="#e0f2fe"></div>
+                    <div class="color-picker-wrapper">
+                        <input type="color" id="bg-color-picker" value="#ffffff">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- อัปโหลดโลโก้ -->
+            <div>
+                <label class="opt-label">โลโก้ตรงกลาง (ถ้ามี)</label>
+                <div class="upload-btn-wrapper">
+                    <button class="btn-upload-custom" id="upload-status-text">เลือกไฟล์</button>
+                    <input type="file" id="logo-input" accept="image/*">
+                </div>
+                <div class="logo-preview-container" id="logo-preview-box">
+                    <button class="btn-delete-logo" onclick="removeLogo()">×</button>
+                    <img id="logo-preview-img" src="" alt="Logo Preview">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button class="btn-generate" onclick="makeQR()">สร้างรหัส QR</button>
+    
+    <div id="qrcode-output"></div>
+    
+    <div id="instruction-box" class="save-instruction">
+        📌 <b>วิธีบันทึกรูปภาพ QR Code ไปใช้งาน:</b><br>
+        • <b>บนมือถือ / แท็บเล็ต:</b> ให้ <b>"แตะค้างที่รูป QR Code"</b> แล้วเลือก <b>"บันทึกรูปภาพ"</b><br>
+        • <b>บนคอมพิวเตอร์:</b> ให้ <b>"คลิกขวาที่รูป QR Code"</b> แล้วเลือก <b>"บันทึกรูปภาพเป็น..."</b>
+    </div>
+</div>
+
+<script>
+    let qrContainer = document.getElementById("qrcode-output");
+    let instructionBox = document.getElementById("instruction-box");
+    
+    let selectedQrColor = "#000000";
+    let selectedBgColor = "#ffffff";
+    let logoDataUrl = null;
+
+    // ระบบเลือกสี QR Code
+    document.querySelectorAll('#qr-presets .color-dot').forEach(dot => {
+        dot.addEventListener('click', (e) => {
+            document.querySelectorAll('#qr-presets .color-dot, #qr-presets .color-picker-wrapper').forEach(el => el.classList.remove('active'));
+            e.target.classList.add('active');
+            selectedQrColor = e.target.getAttribute('data-color');
+        });
+    });
+    document.getElementById('qr-color-picker').addEventListener('input', (e) => {
+        document.querySelectorAll('#qr-presets .color-dot').forEach(el => el.classList.remove('active'));
+        e.target.parentElement.classList.add('active');
+        selectedQrColor = e.target.value;
+    });
+
+    // ระบบเลือกสีพื้นหลัง
+    document.querySelectorAll('#bg-presets .color-dot').forEach(dot => {
+        dot.addEventListener('click', (e) => {
+            document.querySelectorAll('#bg-presets .color-dot, #bg-presets .color-picker-wrapper').forEach(el => el.classList.remove('active'));
+            e.target.classList.add('active');
+            selectedBgColor = e.target.getAttribute('data-color');
+        });
+    });
+    document.getElementById('bg-color-picker').addEventListener('input', (e) => {
+        document.querySelectorAll('#bg-presets .color-dot').forEach(el => el.classList.remove('active'));
+        e.target.parentElement.classList.add('active');
+        selectedBgColor = e.target.value;
+    });
+
+    // ระบบโลโก้
+    document.getElementById('logo-input').addEventListener('change', function(e) {
+        let file = e.target.files[0];
+        if (file) {
+            let reader = new FileReader();
+            reader.onload = function(event) {
+                logoDataUrl = event.target.result;
+                document.getElementById('logo-preview-img').src = logoDataUrl;
+                document.getElementById('logo-preview-box').style.display = 'block';
+                document.getElementById('upload-status-text').innerText = 'เปลี่ยนไฟล์';
+            }
+            reader.readAsDataURL(file);
+        }
+    });
+
+    function removeLogo() {
+        logoDataUrl = null;
+        document.getElementById('logo-input').value = '';
+        document.getElementById('logo-preview-box').style.display = 'none';
+        document.getElementById('upload-status-text').innerText = 'เลือกไฟล์';
+    }
+
+    // ฟังก์ชันสร้าง QR Code และวาดเส้นกรอบอัตโนมัติ
+    function makeQR() {
+        let urlText = document.getElementById("url-input").value.trim();
+        if (urlText === "") {
+            alert("กรุณากรอกลิงก์ URL ก่อนครับ");
+            return;
+        }
+        
+        qrContainer.innerHTML = "";
+        let tempDiv = document.createElement("div");
+        
+        new QRCode(tempDiv, {
+            text: urlText,
+            width: 260,
+            height: 260,
+            colorDark : selectedQrColor,
+            colorLight : selectedBgColor,
+            correctLevel : QRCode.CorrectLevel.H
+        });
+
+        let canvas = tempDiv.querySelector("canvas");
+        if (canvas) {
+            let ctx = canvas.getContext("2d");
+            
+            // ─── เพิ่มระบบวาดเส้นกรอบอัตโนมัติ ───
+            let borderThickness = 6; // ความหนาของเส้นตรงเรียบ (กำลังสวยพอดี)
+            ctx.strokeStyle = selectedQrColor; // ใช้สีเดียวกับสี QR Code ที่เลือกอัตโนมัติ
+            ctx.lineWidth = borderThickness;
+            ctx.lineJoin = "miter"; // กำหนดให้มุมเป็นเหลี่ยมตรงเรียบสนิท
+            
+            // วาดเส้นกรอบสี่เหลี่ยมรอบ Canvas
+            ctx.strokeRect(
+                borderThickness / 2, 
+                borderThickness / 2, 
+                canvas.width - borderThickness, 
+                canvas.height - borderThickness
+            );
+            // ───────────────────────────────────
+
+            // ถ้ามีการใส่โลโก้ ให้วาดทับตรงกลางต่อ
+            if (logoDataUrl) {
+                let img = new Image();
+                img.onload = function() {
+                    let logoSize = canvas.width * 0.18; 
+                    let x = (canvas.width - logoSize) / 2;
+                    let y = (canvas.height - logoSize) / 2;
+                    
+                    ctx.fillStyle = selectedBgColor;
+                    ctx.fillRect(x - 4, y - 4, logoSize + 8, logoSize + 8);
+                    ctx.drawImage(img, x, y, logoSize, logoSize);
+                    convertToImgAndRender(canvas);
+                };
+                img.src = logoDataUrl;
+            } else {
+                convertToImgAndRender(canvas);
+            }
+        }
+    }
+
+    function convertToImgAndRender(canvas) {
+        let finalImg = document.createElement("img");
+        finalImg.src = canvas.toDataURL("image/png");
+        qrContainer.innerHTML = "";
+        qrContainer.appendChild(finalImg);
+        instructionBox.style.display = "block";
+    }
+</script>
+
+</body>
+</html>
