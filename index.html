@@ -341,7 +341,7 @@
         document.getElementById('upload-status-text').innerText = 'เลือกไฟล์';
     }
 
-    // ฟังก์ชันสร้าง QR Code และวาดเส้นกรอบอัตโนมัติ
+    // ฟังก์ชันสร้าง QR Code และจัดวางโครงสร้างใหม่แก้ปัญหาสแกนยาก
     function makeQR() {
         let urlText = document.getElementById("url-input").value.trim();
         if (urlText === "") {
@@ -352,50 +352,67 @@
         qrContainer.innerHTML = "";
         let tempDiv = document.createElement("div");
         
+        // กำหนดขนาดโครงสร้างใหม่ เพื่อสร้างพื้นที่ว่าง (Quiet Zone) ป้องกันกรอบทับรหัส
+        let qrSize = 240;                       // ขนาดของรหัส QR Code ตัวหลัก
+        let padding = 15;                       // ขนาดพื้นที่ว่างรอบตัวรหัส (Quiet Zone) กำลังพอดีสแกนง่าย
+        let finalSize = qrSize + (padding * 2); // ขนาดรวมของชิ้นงานทั้งหมด = 270px
+        
         new QRCode(tempDiv, {
             text: urlText,
-            width: 260,
-            height: 260,
+            width: qrSize,
+            height: qrSize,
             colorDark : selectedQrColor,
             colorLight : selectedBgColor,
-            correctLevel : QRCode.CorrectLevel.H
+            correctLevel : QRCode.CorrectLevel.H   // บังคับใช้ Level H (กู้คืนข้อมูลได้สูงสุด 30% เหมาะสำหรับใส่โลโก้)
         });
 
-        let canvas = tempDiv.querySelector("canvas");
-        if (canvas) {
-            let ctx = canvas.getContext("2d");
+        let qrCanvas = tempDiv.querySelector("canvas");
+        if (qrCanvas) {
+            // สร้าง Canvas แผ่นใหม่เพื่อเอาชิ้นส่วนทั้งหมดมารวมกัน (กันสแกนพลาด)
+            let finalCanvas = document.createElement("canvas");
+            finalCanvas.width = finalSize;
+            finalCanvas.height = finalSize;
+            let ctx = finalCanvas.getContext("2d");
             
-            // ─── เพิ่มระบบวาดเส้นกรอบอัตโนมัติ ───
-            let borderThickness = 6; // ความหนาของเส้นตรงเรียบ (กำลังสวยพอดี)
-            ctx.strokeStyle = selectedQrColor; // ใช้สีเดียวกับสี QR Code ที่เลือกอัตโนมัติ
+            // 1. เทสีพื้นหลังเต็มแผ่นตามที่ผู้ใช้เลือก
+            ctx.fillStyle = selectedBgColor;
+            ctx.fillRect(0, 0, finalSize, finalSize);
+            
+            // 2. วาดตัว QR Code ลงตรงกลาง (ขยับเข้าไปตามระยะ padding)
+            ctx.drawImage(qrCanvas, padding, padding, qrSize, qrSize);
+            
+            // 3. วาดเส้นกรอบรอบนอกสุด (เส้นหนา 6px จะอยู่ห่างจากตัว QR ทำให้สแกนติดง่าย 100%)
+            let borderThickness = 6;
+            ctx.strokeStyle = selectedQrColor;
             ctx.lineWidth = borderThickness;
-            ctx.lineJoin = "miter"; // กำหนดให้มุมเป็นเหลี่ยมตรงเรียบสนิท
-            
-            // วาดเส้นกรอบสี่เหลี่ยมรอบ Canvas
+            ctx.lineJoin = "miter"; 
             ctx.strokeRect(
                 borderThickness / 2, 
                 borderThickness / 2, 
-                canvas.width - borderThickness, 
-                canvas.height - borderThickness
+                finalSize - borderThickness, 
+                finalSize - borderThickness
             );
-            // ───────────────────────────────────
 
-            // ถ้ามีการใส่โลโก้ ให้วาดทับตรงกลางต่อ
+            // 4. ถ้ามีการใส่โลโก้ ให้ประมวลผลวาดทับตรงกลางต่อ
             if (logoDataUrl) {
                 let img = new Image();
                 img.onload = function() {
-                    let logoSize = canvas.width * 0.18; 
-                    let x = (canvas.width - logoSize) / 2;
-                    let y = (canvas.height - logoSize) / 2;
+                    // คำนวณขนาดโลโก้ให้อยู่ในสัดส่วนความปลอดภัย (ประมาณ 18% ของตัวรหัส QR)
+                    let logoSize = qrSize * 0.18; 
+                    let x = (finalSize - logoSize) / 2;
+                    let y = (finalSize - logoSize) / 2;
                     
+                    // เจาะช่องพื้นหลังตรงกลางเป็นสี่เหลี่ยมสีพื้นเพื่อลบเส้น QR Code ด้านหลังโลโก้ทิ้ง (ป้องกันเส้นกวนโลโก้)
                     ctx.fillStyle = selectedBgColor;
                     ctx.fillRect(x - 4, y - 4, logoSize + 8, logoSize + 8);
+                    
+                    // วาดรูปโลโก้ลงไปตรงกลางอย่างแม่นยำ
                     ctx.drawImage(img, x, y, logoSize, logoSize);
-                    convertToImgAndRender(canvas);
+                    convertToImgAndRender(finalCanvas);
                 };
                 img.src = logoDataUrl;
             } else {
-                convertToImgAndRender(canvas);
+                convertToImgAndRender(finalCanvas);
             }
         }
     }
